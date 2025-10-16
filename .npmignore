@@ -26,3 +26,9 @@ examples/
 tmp/
 temp/
 
+# 文档（发布指南不需要发布到 npm）
+PUBLISH.md
+
+# 源码中的文档（保留给开发者）
+src/README.md
+
