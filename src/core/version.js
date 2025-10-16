@@ -3,40 +3,32 @@
  */
 
 function filterVersions(versions, versionsArg, excludeVersionsArg) {
-  var result = versions.slice();
+  let result = versions.slice();
 
   // 如果指定了 --versions，仅保留这些版本
   if (versionsArg) {
-    var want = versionsArg
+    const want = versionsArg
       .split(",")
-      .map(function (s) {
-        return s.trim();
-      })
+      .map((s) => s.trim())
       .filter(Boolean);
-    var wantSet = Object.create(null);
-    want.forEach(function (v) {
+    const wantSet = Object.create(null);
+    want.forEach((v) => {
       wantSet[v] = true;
     });
-    result = result.filter(function (v) {
-      return !!wantSet[v];
-    });
+    result = result.filter((v) => !!wantSet[v]);
   }
 
   // 如果指定了 --exclude-versions，排除这些版本
   if (excludeVersionsArg) {
-    var exclude = excludeVersionsArg
+    const exclude = excludeVersionsArg
       .split(",")
-      .map(function (s) {
-        return s.trim();
-      })
+      .map((s) => s.trim())
       .filter(Boolean);
-    var excludeSet = Object.create(null);
-    exclude.forEach(function (v) {
+    const excludeSet = Object.create(null);
+    exclude.forEach((v) => {
       excludeSet[v] = true;
     });
-    result = result.filter(function (v) {
-      return !excludeSet[v];
-    });
+    result = result.filter((v) => !excludeSet[v]);
   }
 
   return result;
@@ -45,4 +37,3 @@ function filterVersions(versions, versionsArg, excludeVersionsArg) {
 module.exports = {
   filterVersions,
 };
-

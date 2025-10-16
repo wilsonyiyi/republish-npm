@@ -17,19 +17,14 @@ function confirmOrExit(argv, from, to, callback) {
     return;
   }
 
-  const msg =
-    '\n⚠️  即将把包 "' +
-    from +
-    '" 的历史版本重新发布到新包名 "' +
-    to +
-    '"。\n确认继续？(y/N) ';
+  const msg = `\n⚠️  即将把包 "${from}" 的历史版本重新发布到新包名 "${to}"。\n确认继续？(y/N) `;
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  rl.question(msg, function (answer) {
+  rl.question(msg, (answer) => {
     rl.close();
     const input = answer.trim().toLowerCase();
 
@@ -43,9 +38,9 @@ function confirmOrExit(argv, from, to, callback) {
   });
 
   // 处理读取错误
-  rl.on("error", function (e) {
+  rl.on("error", (e) => {
     rl.close();
-    err("读取用户输入失败：" + e.message);
+    err(`读取用户输入失败：${e.message}`);
     log("❌ 未收到确认，操作已取消。");
     process.exit(1);
   });
@@ -54,4 +49,3 @@ function confirmOrExit(argv, from, to, callback) {
 module.exports = {
   confirmOrExit,
 };
-

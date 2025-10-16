@@ -13,13 +13,7 @@ const { parseArgs } = require("./core/args");
 const { confirmOrExit } = require("./core/confirm");
 const { filterVersions } = require("./core/version");
 const { rewriteName } = require("./core/package");
-const {
-  ensureNpmAuth,
-  getAllVersions,
-  packOneVersion,
-  extractToReadyDir,
-  publishOne,
-} = require("./core/npm");
+const { ensureNpmAuth, getAllVersions, packOneVersion, extractToReadyDir, publishOne } = require("./core/npm");
 
 function main() {
   const argv = parseArgs();
@@ -50,7 +44,7 @@ function main() {
   ensureNpmAuth();
 
   // 使用回调处理异步确认
-  confirmOrExit(argv, fromName, toName, function () {
+  confirmOrExit(argv, fromName, toName, () => {
     try {
       log("📁 创建临时工作目录...");
       const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "republish-npm-"));
@@ -58,19 +52,15 @@ function main() {
       const workDir = path.join(tmpRoot, "work");
       fs.mkdirSync(packDir, { recursive: true });
       fs.mkdirSync(workDir, { recursive: true });
-      log("✓ 临时目录：" + tmpRoot + "\n");
+      log(`✓ 临时目录：${tmpRoot}\n`);
 
       const all = getAllVersions(fromName, registry);
       if (!all.length) {
-        err("❌ 未在 registry 中找到 " + fromName + " 的历史版本。");
+        err(`❌ 未在 registry 中找到 ${fromName} 的历史版本。`);
         process.exit(1);
       }
 
-      const targetVersions = filterVersions(
-        all,
-        versionsArg,
-        excludeVersionsArg
-      );
+      const targetVersions = filterVersions(all, versionsArg, excludeVersionsArg);
       if (!targetVersions.length) {
         err("❌ 经筛选后，没有需要处理的版本。");
         process.exit(1);
@@ -81,29 +71,22 @@ function main() {
         const excludedCount =
           all.length -
           targetVersions.length -
-          (versionsArg
-            ? all.length - filterVersions(all, versionsArg, null).length
-            : 0);
+          (versionsArg ? all.length - filterVersions(all, versionsArg, null).length : 0);
         if (excludedCount > 0) {
-          log("✓ 已排除 " + excludedCount + " 个版本");
+          log(`✓ 已排除 ${excludedCount} 个版本`);
         }
       }
 
-      log(
-        "📋 待处理版本（共 " +
-          targetVersions.length +
-          " 个）：" +
-          targetVersions.join(", ")
-      );
+      log(`📋 待处理版本（共 ${targetVersions.length} 个）：${targetVersions.join(", ")}`);
       log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
       const failures = [];
       const startTime = Date.now();
 
-      for (var i = 0; i < targetVersions.length; i++) {
+      for (let i = 0; i < targetVersions.length; i++) {
         const v = targetVersions[i];
-        const progress = "[" + (i + 1) + "/" + targetVersions.length + "]";
-        log("\n" + progress + " 🔄 处理版本 " + v);
+        const progress = `[${i + 1}/${targetVersions.length}]`;
+        log(`\n${progress} 🔄 处理版本 ${v}`);
         log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         try {
           const tgz = packOneVersion(packDir, fromName, v, registry);
@@ -111,13 +94,7 @@ function main() {
           const meta = rewriteName(pkgDir, toName, keepScripts);
 
           if (meta.version !== v) {
-            warn(
-              "⚠️  解包后的 package.json version(" +
-                meta.version +
-                ") 与目标版本(" +
-                v +
-                ")不一致，将按包内 version 发布。"
-            );
+            warn(`⚠️  解包后的 package.json version(${meta.version}) 与目标版本(${v})不一致，将按包内 version 发布。`);
           }
 
           publishOne(pkgDir, {
@@ -126,26 +103,16 @@ function main() {
             tag: tag,
             dryRun: dryRun,
           });
-          log(
-            "✅ " +
-              progress +
-              " 成功：" +
-              toName +
-              "@" +
-              meta.version +
-              (dryRun ? " (dry-run)" : "")
-          );
+          log(`✅ ${progress} 成功：${toName}@${meta.version}${dryRun ? " (dry-run)" : ""}`);
         } catch (e) {
           failures.push({ version: v, error: e.message });
-          err("❌ " + progress + " 失败：" + toName + "@" + v);
-          err("   错误详情：" + e.message);
+          err(`❌ ${progress} 失败：${toName}@${v}`);
+          err(`   错误详情：${e.message}`);
 
           // 如果是关键性错误（如网络问题），提前终止
           if (
             e.message &&
-            (e.message.includes("ENOTFOUND") ||
-              e.message.includes("ETIMEDOUT") ||
-              e.message.includes("ECONNREFUSED"))
+            (e.message.includes("ENOTFOUND") || e.message.includes("ETIMEDOUT") || e.message.includes("ECONNREFUSED"))
           ) {
             err("\n❌ 检测到网络错误，终止后续处理");
             break;
@@ -156,21 +123,19 @@ function main() {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
       log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       log("🎉 全部处理完毕！");
-      log("⏱️  总耗时：" + elapsed + " 秒");
+      log(`⏱️  总耗时：${elapsed} 秒`);
       log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
       if (failures.length) {
-        warn("\n❌ 失败 " + failures.length + " 项：");
-        for (var j = 0; j < failures.length; j++) {
-          var f = failures[j];
-          warn("   • " + toName + "@" + f.version + ": " + f.error);
+        warn(`\n❌ 失败 ${failures.length} 项：`);
+        for (let j = 0; j < failures.length; j++) {
+          const f = failures[j];
+          warn(`   • ${toName}@${f.version}: ${f.error}`);
         }
-        log(
-          "\n✅ 成功：" + (targetVersions.length - failures.length) + " 个版本"
-        );
+        log(`\n✅ 成功：${targetVersions.length - failures.length} 个版本`);
         process.exitCode = 1;
       } else {
-        log("\n✅ 成功发布所有 " + targetVersions.length + " 个指定版本！");
+        log(`\n✅ 成功发布所有 ${targetVersions.length} 个指定版本！`);
       }
     } catch (fatalError) {
       err("\n❌ 程序执行出现致命错误：");
@@ -190,4 +155,3 @@ module.exports = { main };
 if (require.main === module) {
   main();
 }
-

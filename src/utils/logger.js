@@ -2,16 +2,16 @@
  * 日志工具模块
  */
 
-function log() {
-  console.log("[republish-npm]", ...arguments);
+function log(...args) {
+  console.log("[republish-npm]", ...args);
 }
 
-function warn() {
-  console.warn("[republish-npm][warn]", ...arguments);
+function warn(...args) {
+  console.warn("[republish-npm][warn]", ...args);
 }
 
-function err() {
-  console.error("[republish-npm][error]", ...arguments);
+function err(...args) {
+  console.error("[republish-npm][error]", ...args);
 }
 
 module.exports = {
@@ -19,4 +19,3 @@ module.exports = {
   warn,
   err,
 };
-

@@ -7,15 +7,7 @@ const { err } = require("../utils/logger");
 
 function parseArgs() {
   const argv = minimist(process.argv.slice(2), {
-    string: [
-      "from",
-      "to",
-      "registry",
-      "versions",
-      "exclude-versions",
-      "access",
-      "tag",
-    ],
+    string: ["from", "to", "registry", "versions", "exclude-versions", "access", "tag"],
     boolean: ["dry-run", "yes", "keep-scripts"],
     alias: { f: "from", t: "to", r: "registry" },
     default: { access: "public", yes: false, "keep-scripts": false },
@@ -44,13 +36,13 @@ function parseArgs() {
         "  republish-npm --from foo --to bar --versions 1.0.0,1.1.0 --dry-run",
         "  republish-npm --from foo --to bar --exclude-versions 1.0.5,2.0.0-beta.1",
         "",
-      ].join("\n")
+      ].join("\n"),
     );
     process.exit(1);
   }
 
   if (!/^public|restricted$/.test(argv.access)) {
-    err("--access 仅支持 public|restricted，收到：" + argv.access);
+    err(`--access 仅支持 public|restricted，收到：${argv.access}`);
     process.exit(1);
   }
 
@@ -60,4 +52,3 @@ function parseArgs() {
 module.exports = {
   parseArgs,
 };
-
