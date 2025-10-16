@@ -32,21 +32,21 @@ function startLoading(message) {
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let i = 0;
   process.stdout.write("  " + frames[0] + " " + message);
-  
-  const interval = setInterval(function() {
+
+  const interval = setInterval(function () {
     i = (i + 1) % frames.length;
     process.stdout.write("\r  " + frames[i] + " " + message);
   }, 80);
-  
+
   return {
-    stop: function(successMsg) {
+    stop: function (successMsg) {
       clearInterval(interval);
       process.stdout.write("\r  ✓ " + (successMsg || message) + "\n");
     },
-    fail: function(errorMsg) {
+    fail: function (errorMsg) {
       clearInterval(interval);
       process.stdout.write("\r  ✗ " + (errorMsg || message) + "\n");
-    }
+    },
   };
 }
 
@@ -75,7 +75,15 @@ function run(cmd, args, opts) {
 
 function parseArgs() {
   const argv = minimist(process.argv.slice(2), {
-    string: ["from", "to", "registry", "versions", "access", "tag"],
+    string: [
+      "from",
+      "to",
+      "registry",
+      "versions",
+      "exclude-versions",
+      "access",
+      "tag",
+    ],
     boolean: ["dry-run", "yes", "keep-scripts"],
     alias: { f: "from", t: "to", r: "registry" },
     default: { access: "public", yes: false, "keep-scripts": false },
@@ -91,6 +99,7 @@ function parseArgs() {
         "选项：",
         "  --registry <url>           自定义 npm registry",
         "  --versions <v1,v2>         仅处理指定版本（逗号分隔）",
+        "  --exclude-versions <v1,v2> 排除指定版本（逗号分隔）",
         "  --dry-run                  演练模式，不真正发布",
         "  --yes                      跳过确认步骤",
         "  --access <public|restricted>  访问权限（默认：public）",
@@ -101,6 +110,7 @@ function parseArgs() {
         "  republish-npm --from @old-scope/pkg --to @new-scope/pkg",
         "  republish-npm --from foo --to @new/foo --registry https://registry.npmjs.org",
         "  republish-npm --from foo --to bar --versions 1.0.0,1.1.0 --dry-run",
+        "  republish-npm --from foo --to bar --exclude-versions 1.0.5,2.0.0-beta.1",
         "",
       ].join("\n")
     );
@@ -125,23 +135,23 @@ function confirmOrExit(argv, from, to, callback) {
     callback();
     return;
   }
-  
+
   const msg =
     '\n⚠️  即将把包 "' +
     from +
     '" 的历史版本重新发布到新包名 "' +
     to +
     '"。\n确认继续？(y/N) ';
-  
+
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
-  
-  rl.question(msg, function(answer) {
+
+  rl.question(msg, function (answer) {
     rl.close();
     const input = answer.trim().toLowerCase();
-    
+
     if (input === "y" || input === "yes") {
       log("✓ 用户确认，开始执行...\n");
       callback();
@@ -150,9 +160,9 @@ function confirmOrExit(argv, from, to, callback) {
       process.exit(0);
     }
   });
-  
+
   // 处理读取错误
-  rl.on('error', function(e) {
+  rl.on("error", function (e) {
     rl.close();
     err("读取用户输入失败：" + e.message);
     log("❌ 未收到确认，操作已取消。");
@@ -199,21 +209,44 @@ function getAllVersions(pkg, registry) {
   }
 }
 
-function filterVersions(versions, versionsArg) {
-  if (!versionsArg) return versions.slice();
-  var want = versionsArg
-    .split(",")
-    .map(function (s) {
-      return s.trim();
-    })
-    .filter(Boolean);
-  var set = Object.create(null);
-  want.forEach(function (v) {
-    set[v] = true;
-  });
-  return versions.filter(function (v) {
-    return !!set[v];
-  });
+function filterVersions(versions, versionsArg, excludeVersionsArg) {
+  var result = versions.slice();
+
+  // 如果指定了 --versions，仅保留这些版本
+  if (versionsArg) {
+    var want = versionsArg
+      .split(",")
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+    var wantSet = Object.create(null);
+    want.forEach(function (v) {
+      wantSet[v] = true;
+    });
+    result = result.filter(function (v) {
+      return !!wantSet[v];
+    });
+  }
+
+  // 如果指定了 --exclude-versions，排除这些版本
+  if (excludeVersionsArg) {
+    var exclude = excludeVersionsArg
+      .split(",")
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+    var excludeSet = Object.create(null);
+    exclude.forEach(function (v) {
+      excludeSet[v] = true;
+    });
+    result = result.filter(function (v) {
+      return !excludeSet[v];
+    });
+  }
+
+  return result;
 }
 
 function packOneVersion(tmpDir, fromName, version, registry) {
@@ -227,7 +260,8 @@ function packOneVersion(tmpDir, fromName, version, registry) {
     const lines = out.split("\n");
     const tgzName = lines[lines.length - 1].trim();
     const absPath = path.join(tmpDir, tgzName);
-    if (!fs.existsSync(absPath)) throw new Error("未找到 pack 产物：" + absPath);
+    if (!fs.existsSync(absPath))
+      throw new Error("未找到 pack 产物：" + absPath);
     loader.stop("已下载：" + tgzName);
     return absPath;
   } catch (e) {
@@ -266,36 +300,36 @@ function rewriteName(pkgDir, newName, keepScripts) {
   const pkgJsonPath = path.join(pkgDir, "package.json");
   const pkg = readJSON(pkgJsonPath);
   const oldName = pkg.name;
-  
+
   // 修改包名
   pkg.name = newName;
-  
+
   // 清理可能导致发布失败的 scripts（除非用户指定保留）
   const removedScripts = [];
   if (!keepScripts && pkg.scripts) {
     const scriptsToRemove = [
       "prepublishOnly",
-      "prepublish", 
+      "prepublish",
       "prepare",
-      "prepack"
+      "prepack",
     ];
-    
-    scriptsToRemove.forEach(function(scriptName) {
+
+    scriptsToRemove.forEach(function (scriptName) {
       if (pkg.scripts[scriptName]) {
         removedScripts.push(scriptName);
         delete pkg.scripts[scriptName];
       }
     });
-    
+
     // 如果 scripts 对象为空，删除整个 scripts 字段
     if (Object.keys(pkg.scripts).length === 0) {
       delete pkg.scripts;
     }
   }
-  
+
   // 清理可能导致问题的其他字段
   const fieldsToClean = ["publishConfig"];
-  fieldsToClean.forEach(function(field) {
+  fieldsToClean.forEach(function (field) {
     if (pkg[field] && pkg[field].registry) {
       log("  ⚠️  移除 package.json 中的 " + field + ".registry");
       delete pkg[field].registry;
@@ -304,16 +338,16 @@ function rewriteName(pkgDir, newName, keepScripts) {
       }
     }
   });
-  
+
   writeJSON(pkgJsonPath, pkg);
   log("  ✓ 包名已从 " + oldName + " 改为 " + newName);
-  
+
   if (removedScripts.length > 0) {
     log("  ✓ 已清理 scripts: " + removedScripts.join(", "));
   } else if (keepScripts && pkg.scripts) {
     log("  ℹ️  保留原始 scripts（--keep-scripts）");
   }
-  
+
   return { version: pkg.version };
 }
 
@@ -341,6 +375,7 @@ function main() {
   const toName = argv.to;
   const registry = argv.registry;
   const versionsArg = argv.versions;
+  const excludeVersionsArg = argv["exclude-versions"];
   const dryRun = !!argv["dry-run"];
   const access = argv.access;
   const tag = argv.tag;
@@ -354,15 +389,16 @@ function main() {
   if (registry) log("🌐 使用自定义 registry:", registry);
   else log("🌐 未指定 --registry，将使用 npm 默认配置（.npmrc / 环境变量）");
   if (versionsArg) log("🔢 指定版本:", versionsArg);
+  if (excludeVersionsArg) log("🚫 排除版本:", excludeVersionsArg);
   if (tag) log("🏷️  发布标签:", tag);
   log("🔓 访问权限:", access);
   log("🧹 清理构建脚本:", keepScripts ? "否" : "是");
   log("");
 
   ensureNpmAuth();
-  
+
   // 使用回调处理异步确认
-  confirmOrExit(argv, fromName, toName, function() {
+  confirmOrExit(argv, fromName, toName, function () {
     try {
       log("📁 创建临时工作目录...");
       const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "republish-npm-"));
@@ -378,21 +414,40 @@ function main() {
         process.exit(1);
       }
 
-      const targetVersions = filterVersions(all, versionsArg);
+      const targetVersions = filterVersions(
+        all,
+        versionsArg,
+        excludeVersionsArg
+      );
       if (!targetVersions.length) {
         err("❌ 经筛选后，没有需要处理的版本。");
         process.exit(1);
       }
 
+      // 显示排除的版本信息
+      if (excludeVersionsArg) {
+        const excludedCount =
+          all.length -
+          targetVersions.length -
+          (versionsArg
+            ? all.length - filterVersions(all, versionsArg, null).length
+            : 0);
+        if (excludedCount > 0) {
+          log("✓ 已排除 " + excludedCount + " 个版本");
+        }
+      }
+
       log(
-        "📋 待处理版本（共 " + targetVersions.length + " 个）：" +
-        targetVersions.join(", ")
+        "📋 待处理版本（共 " +
+          targetVersions.length +
+          " 个）：" +
+          targetVersions.join(", ")
       );
       log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
       const failures = [];
       const startTime = Date.now();
-      
+
       for (var i = 0; i < targetVersions.length; i++) {
         const v = targetVersions[i];
         const progress = "[" + (i + 1) + "/" + targetVersions.length + "]";
@@ -420,7 +475,9 @@ function main() {
             dryRun: dryRun,
           });
           log(
-            "✅ " + progress + " 成功：" +
+            "✅ " +
+              progress +
+              " 成功：" +
               toName +
               "@" +
               meta.version +
@@ -430,13 +487,14 @@ function main() {
           failures.push({ version: v, error: e.message });
           err("❌ " + progress + " 失败：" + toName + "@" + v);
           err("   错误详情：" + e.message);
-          
+
           // 如果是关键性错误（如网络问题），提前终止
-          if (e.message && (
-            e.message.includes("ENOTFOUND") || 
-            e.message.includes("ETIMEDOUT") ||
-            e.message.includes("ECONNREFUSED")
-          )) {
+          if (
+            e.message &&
+            (e.message.includes("ENOTFOUND") ||
+              e.message.includes("ETIMEDOUT") ||
+              e.message.includes("ECONNREFUSED"))
+          ) {
             err("\n❌ 检测到网络错误，终止后续处理");
             break;
           }
@@ -448,14 +506,16 @@ function main() {
       log("🎉 全部处理完毕！");
       log("⏱️  总耗时：" + elapsed + " 秒");
       log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      
+
       if (failures.length) {
         warn("\n❌ 失败 " + failures.length + " 项：");
         for (var j = 0; j < failures.length; j++) {
           var f = failures[j];
           warn("   • " + toName + "@" + f.version + ": " + f.error);
         }
-        log("\n✅ 成功：" + (targetVersions.length - failures.length) + " 个版本");
+        log(
+          "\n✅ 成功：" + (targetVersions.length - failures.length) + " 个版本"
+        );
         process.exitCode = 1;
       } else {
         log("\n✅ 成功发布所有 " + targetVersions.length + " 个指定版本！");

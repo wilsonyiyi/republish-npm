@@ -22,21 +22,26 @@ republish-npm --from foo --to @new/foo --registry https://registry.npmjs.org
 
 republish-npm --from foo --to bar --versions 1.0.0,1.0.2 --dry-run
 
+#### 排除指定版本
+
+republish-npm --from foo --to bar --exclude-versions 1.0.5,2.0.0-beta.1
+
 #### 跳过交互确认
 
 republish-npm --from foo --to bar --yes
 
 ### 参数
 
-- --from（必填）：旧包名
-- --to（必填）：新包名
-- --registry（可选）：自定义 registry；不传则使用 npm 默认配置
-- --versions（可选）：逗号分隔列表，仅处理这些版本
-- --dry-run（可选）：演练模式，仅打印命令不发布
-- --yes（可选）：跳过确认
-- --access（可选）：public（默认）或 restricted
-- --tag（可选）：发布 dist-tag
-- --keep-scripts（可选）：保留 package.json 中的构建脚本（默认会清理 prepublishOnly、prepublish、prepare、prepack）
+- **--from**（必填）：旧包名
+- **--to**（必填）：新包名
+- **--registry**（可选）：自定义 registry；不传则使用 npm 默认配置
+- **--versions**（可选）：逗号分隔列表，仅处理这些版本
+- **--exclude-versions**（可选）：逗号分隔列表，排除这些版本
+- **--dry-run**（可选）：演练模式，仅打印命令不发布
+- **--yes**（可选）：跳过确认
+- **--access**（可选）：public（默认）或 restricted
+- **--tag**（可选）：发布 dist-tag
+- **--keep-scripts**（可选）：保留 package.json 中的构建脚本（默认会清理 prepublishOnly、prepublish、prepare、prepack）
 
 ### 特性
 
