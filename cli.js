@@ -83,12 +83,15 @@ function parseArgs() {
 
 function confirmOrExit(argv, from, to) {
   if (argv["dry-run"]) {
-    log("dry-run（演练）模式，不会真正发布。");
+    log("🔍 dry-run（演练）模式，不会真正发布。");
     return;
   }
-  if (argv.yes) return;
+  if (argv.yes) {
+    log("✓ 已通过 --yes 跳过确认步骤。");
+    return;
+  }
   const msg =
-    '即将把包 "' +
+    '\n⚠️  即将把包 "' +
     from +
     '" 的历史版本重新发布到新包名 "' +
     to +
@@ -97,10 +100,15 @@ function confirmOrExit(argv, from, to) {
   try {
     const input = fs.readFileSync(0, "utf-8").trim().toLowerCase();
     if (input !== "y" && input !== "yes") {
-      log("已取消。");
+      log("❌ 用户取消操作。");
       process.exit(0);
     }
-  } catch (_) {}
+    log("✓ 用户确认，开始执行...\n");
+  } catch (e) {
+    err("读取用户输入失败：" + e.message);
+    log("❌ 未收到确认，操作已取消。");
+    process.exit(1);
+  }
 }
 
 function npmArgsWithRegistry(baseArgs, registry) {
@@ -109,8 +117,10 @@ function npmArgsWithRegistry(baseArgs, registry) {
 }
 
 function ensureNpmAuth() {
+  log("🔐 检查 npm 认证状态...");
   try {
-    run("npm", ["whoami"]);
+    const username = run("npm", ["whoami"]);
+    log("✓ 已登录用户：" + username);
   } catch (_) {
     warn(
       "`npm whoami` 失败。请确认已登录（npm login）并有目标 scope 的发布权限。"
@@ -119,6 +129,7 @@ function ensureNpmAuth() {
 }
 
 function getAllVersions(pkg, registry) {
+  log("📦 正在获取包 " + pkg + " 的历史版本列表...");
   const out = run(
     "npm",
     npmArgsWithRegistry(["view", pkg, "versions", "--json"], registry)
@@ -130,6 +141,7 @@ function getAllVersions(pkg, registry) {
   } catch (e) {
     if (out) versions = [out.replace(/"/g, "").trim()];
   }
+  log("✓ 找到 " + versions.length + " 个历史版本");
   return versions;
 }
 
@@ -151,6 +163,7 @@ function filterVersions(versions, versionsArg) {
 }
 
 function packOneVersion(tmpDir, fromName, version, registry) {
+  log("  📥 下载版本 " + version + "...");
   const args = npmArgsWithRegistry(
     ["pack", fromName + "@" + version],
     registry
@@ -160,10 +173,12 @@ function packOneVersion(tmpDir, fromName, version, registry) {
   const tgzName = lines[lines.length - 1].trim();
   const absPath = path.join(tmpDir, tgzName);
   if (!fs.existsSync(absPath)) throw new Error("未找到 pack 产物：" + absPath);
+  log("  ✓ 已下载：" + tgzName);
   return absPath;
 }
 
 function extractToReadyDir(tgzPath, workRoot) {
+  log("  📂 解压包文件...");
   const folderName = path.basename(tgzPath, ".tgz");
   const dest = path.join(workRoot, folderName);
   fs.mkdirSync(dest, { recursive: true });
@@ -171,6 +186,7 @@ function extractToReadyDir(tgzPath, workRoot) {
   const pkgDir = path.join(dest, "package");
   if (!fs.existsSync(pkgDir))
     throw new Error("解压结构异常，未找到目录：" + pkgDir);
+  log("  ✓ 解压完成");
   return pkgDir;
 }
 
@@ -182,10 +198,13 @@ function writeJSON(p, obj) {
 }
 
 function rewriteName(pkgDir, newName) {
+  log("  ✏️  修改包名为：" + newName);
   const pkgJsonPath = path.join(pkgDir, "package.json");
   const pkg = readJSON(pkgJsonPath);
+  const oldName = pkg.name;
   pkg.name = newName;
   writeJSON(pkgJsonPath, pkg);
+  log("  ✓ 包名已从 " + oldName + " 改为 " + newName);
   return { version: pkg.version };
 }
 
@@ -194,10 +213,12 @@ function publishOne(pkgDir, opts) {
   if (opts.tag) args.push("--tag", opts.tag);
   const finalArgs = npmArgsWithRegistry(args, opts.registry);
   if (opts.dryRun) {
-    log("[dry-run] npm " + finalArgs.join(" ") + " (cwd: " + pkgDir + ")");
+    log("  🔍 [dry-run] npm " + finalArgs.join(" ") + " (cwd: " + pkgDir + ")");
     return;
   }
+  log("  🚀 发布到 npm registry...");
   run("npm", finalArgs, { cwd: pkgDir });
+  log("  ✓ 发布成功");
 }
 
 function main() {
@@ -210,42 +231,55 @@ function main() {
   const access = argv.access;
   const tag = argv.tag;
 
-  log("来源包:", fromName);
-  log("目标包:", toName);
-  if (registry) log("使用自定义 registry:", registry);
-  else log("未指定 --registry，将使用 npm 默认配置（.npmrc / 环境变量）");
+  log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  log("📦 NPM 包重新发布工具");
+  log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  log("📌 来源包:", fromName);
+  log("📌 目标包:", toName);
+  if (registry) log("🌐 使用自定义 registry:", registry);
+  else log("🌐 未指定 --registry，将使用 npm 默认配置（.npmrc / 环境变量）");
+  if (versionsArg) log("🔢 指定版本:", versionsArg);
+  if (tag) log("🏷️  发布标签:", tag);
+  log("🔓 访问权限:", access);
+  log("");
 
   ensureNpmAuth();
   confirmOrExit(argv, fromName, toName);
 
+  log("📁 创建临时工作目录...");
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "republish-npm-"));
   const packDir = path.join(tmpRoot, "packs");
   const workDir = path.join(tmpRoot, "work");
   fs.mkdirSync(packDir, { recursive: true });
   fs.mkdirSync(workDir, { recursive: true });
+  log("✓ 临时目录：" + tmpRoot + "\n");
 
-  log("读取历史版本...");
   const all = getAllVersions(fromName, registry);
   if (!all.length) {
-    err("未在 registry 中找到 " + fromName + " 的历史版本。");
+    err("❌ 未在 registry 中找到 " + fromName + " 的历史版本。");
     process.exit(1);
   }
 
   const targetVersions = filterVersions(all, versionsArg);
   if (!targetVersions.length) {
-    err("经筛选后，没有需要处理的版本。");
+    err("❌ 经筛选后，没有需要处理的版本。");
     process.exit(1);
   }
 
   log(
-    "待处理版本（共 " + targetVersions.length + " 个）：",
+    "📋 待处理版本（共 " + targetVersions.length + " 个）：" +
     targetVersions.join(", ")
   );
+  log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   const failures = [];
+  const startTime = Date.now();
+  
   for (var i = 0; i < targetVersions.length; i++) {
     const v = targetVersions[i];
-    log("\n==> 处理版本 " + v);
+    const progress = "[" + (i + 1) + "/" + targetVersions.length + "]";
+    log("\n" + progress + " 🔄 处理版本 " + v);
+    log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     try {
       const tgz = packOneVersion(packDir, fromName, v, registry);
       const pkgDir = extractToReadyDir(tgz, workDir);
@@ -253,7 +287,7 @@ function main() {
 
       if (meta.version !== v) {
         warn(
-          "解包后的 package.json version(" +
+          "⚠️  解包后的 package.json version(" +
             meta.version +
             ") 与目标版本(" +
             v +
@@ -268,7 +302,7 @@ function main() {
         dryRun: dryRun,
       });
       log(
-        "发布完成：" +
+        "✅ " + progress + " 成功：" +
           toName +
           "@" +
           meta.version +
@@ -276,20 +310,27 @@ function main() {
       );
     } catch (e) {
       failures.push({ version: v, error: e.message });
-      err("发布失败：" + toName + "@" + v + "\n" + e.message);
+      err("❌ " + progress + " 失败：" + toName + "@" + v);
+      err("   错误详情：" + e.message);
     }
   }
 
-  log("\n全部处理完毕。");
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+  log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  log("🎉 全部处理完毕！");
+  log("⏱️  总耗时：" + elapsed + " 秒");
+  log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  
   if (failures.length) {
-    warn("失败 " + failures.length + " 项：");
+    warn("\n❌ 失败 " + failures.length + " 项：");
     for (var j = 0; j < failures.length; j++) {
       var f = failures[j];
-      warn("- " + toName + "@" + f.version + ": " + f.error);
+      warn("   • " + toName + "@" + f.version + ": " + f.error);
     }
+    log("\n✅ 成功：" + (targetVersions.length - failures.length) + " 个版本");
     process.exitCode = 1;
   } else {
-    log("成功发布所有指定版本。");
+    log("\n✅ 成功发布所有 " + targetVersions.length + " 个指定版本！");
   }
 }
 
