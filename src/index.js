@@ -20,6 +20,8 @@ function main() {
   const fromName = argv.from;
   const toName = argv.to;
   const registry = argv.registry;
+  const fromRegistry = argv["from-registry"];
+  const toRegistry = argv["to-registry"];
   const versionsArg = argv.versions;
   const excludeVersionsArg = argv["exclude-versions"];
   const dryRun = !!argv["dry-run"];
@@ -27,13 +29,26 @@ function main() {
   const tag = argv.tag;
   const keepScripts = !!argv["keep-scripts"];
 
+  // 确定实际使用的 registry
+  const sourceRegistry = fromRegistry || registry;
+  const targetRegistry = toRegistry || registry;
+
   log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   log("📦 NPM 包重新发布工具");
   log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   log("📌 来源包:", fromName);
   log("📌 目标包:", toName);
-  if (registry) log("🌐 使用自定义 registry:", registry);
-  else log("🌐 未指定 --registry，将使用 npm 默认配置（.npmrc / 环境变量）");
+
+  // 显示 registry 配置
+  if (fromRegistry && toRegistry) {
+    log("🌐 源包 registry:", fromRegistry);
+    log("🌐 目标包 registry:", toRegistry);
+  } else if (registry) {
+    log("🌐 使用自定义 registry:", registry);
+  } else {
+    log("🌐 未指定 registry，将使用 npm 默认配置（.npmrc / 环境变量）");
+  }
+
   if (versionsArg) log("🔢 指定版本:", versionsArg);
   if (excludeVersionsArg) log("🚫 排除版本:", excludeVersionsArg);
   if (tag) log("🏷️  发布标签:", tag);
@@ -54,7 +69,7 @@ function main() {
       fs.mkdirSync(workDir, { recursive: true });
       log(`✓ 临时目录：${tmpRoot}\n`);
 
-      const all = getAllVersions(fromName, registry);
+      const all = getAllVersions(fromName, sourceRegistry);
       if (!all.length) {
         err(`❌ 未在 registry 中找到 ${fromName} 的历史版本。`);
         process.exit(1);
@@ -89,7 +104,7 @@ function main() {
         log(`\n${progress} 🔄 处理版本 ${v}`);
         log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         try {
-          const tgz = packOneVersion(packDir, fromName, v, registry);
+          const tgz = packOneVersion(packDir, fromName, v, sourceRegistry);
           const pkgDir = extractToReadyDir(tgz, workDir);
           const meta = rewriteName(pkgDir, toName, keepScripts);
 
@@ -98,7 +113,7 @@ function main() {
           }
 
           publishOne(pkgDir, {
-            registry: registry,
+            registry: targetRegistry,
             access: access,
             tag: tag,
             dryRun: dryRun,
