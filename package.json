@@ -1,14 +1,46 @@
 {
   "name": "@wilson_janet/republish-npm",
-  "version": "1.0.1",
+  "version": "0.1.0",
   "description": "Republish all versions of an npm package under a new name.",
+  "main": "cli.js",
   "bin": {
     "republish-npm": "./cli.js"
   },
+  "scripts": {
+    "prepublishOnly": "echo '准备发布...' && node -e \"console.log('检查 cli.js 是否存在:', require('fs').existsSync('./cli.js'))\"",
+    "version": "echo '更新版本到' $npm_package_version",
+    "postversion": "git push && git push --tags",
+    "publish:patch": "npm version patch && npm publish",
+    "publish:minor": "npm version minor && npm publish",
+    "publish:major": "npm version major && npm publish"
+  },
+  "keywords": [
+    "npm",
+    "republish",
+    "migrate",
+    "package",
+    "cli",
+    "rename",
+    "scope"
+  ],
+  "author": "wilson_janet",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wilson_janet/republish-npm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wilson_janet/republish-npm/issues"
+  },
+  "homepage": "https://github.com/wilson_janet/republish-npm#readme",
   "engines": {
     "node": ">=14.17.0"
   },
+  "files": [
+    "cli.js",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "minimist": "^1.2.8",
     "tar": "^6.2.1"

@@ -1,0 +1,28 @@
+# 开发文件
+.git
+.gitignore
+.DS_Store
+*.log
+
+# 测试和示例
+test/
+tests/
+examples/
+*.test.js
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# 临时文件
+tmp/
+temp/
+
