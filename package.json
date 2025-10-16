@@ -1,5 +1,5 @@
 {
-  "name": "republish-npm",
+  "name": "@wilson_janet/republish-npm",
   "version": "1.0.1",
   "description": "Republish all versions of an npm package under a new name.",
   "bin": {
