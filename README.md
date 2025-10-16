@@ -36,3 +36,12 @@ republish-npm --from foo --to bar --yes
 - --yes（可选）：跳过确认
 - --access（可选）：public（默认）或 restricted
 - --tag（可选）：发布 dist-tag
+- --keep-scripts（可选）：保留 package.json 中的构建脚本（默认会清理 prepublishOnly、prepublish、prepare、prepack）
+
+### 特性
+
+- 🔒 自动清理可能导致发布失败的构建脚本（prepublishOnly、prepublish、prepare、prepack）
+- 🧹 自动移除 publishConfig.registry 以避免发布到错误的仓库
+- 📊 实时进度显示和 Loading 动画
+- ⚠️ 智能错误处理，网络错误时提前终止
+- 🎯 支持指定版本或全量迁移

@@ -76,9 +76,9 @@ function run(cmd, args, opts) {
 function parseArgs() {
   const argv = minimist(process.argv.slice(2), {
     string: ["from", "to", "registry", "versions", "access", "tag"],
-    boolean: ["dry-run", "yes"],
+    boolean: ["dry-run", "yes", "keep-scripts"],
     alias: { f: "from", t: "to", r: "registry" },
-    default: { access: "public", yes: false },
+    default: { access: "public", yes: false, "keep-scripts": false },
   });
 
   if (!argv.from || !argv.to) {
@@ -86,7 +86,16 @@ function parseArgs() {
       [
         "",
         "用法：",
-        "  republish-npm --from <旧包名> --to <新包名> [--registry <url>] [--versions <v1,v2>] [--dry-run] [--access public|restricted] [--tag <dist-tag>]",
+        "  republish-npm --from <旧包名> --to <新包名> [选项]",
+        "",
+        "选项：",
+        "  --registry <url>           自定义 npm registry",
+        "  --versions <v1,v2>         仅处理指定版本（逗号分隔）",
+        "  --dry-run                  演练模式，不真正发布",
+        "  --yes                      跳过确认步骤",
+        "  --access <public|restricted>  访问权限（默认：public）",
+        "  --tag <dist-tag>           发布 dist-tag",
+        "  --keep-scripts             保留 package.json 中的构建脚本",
         "",
         "示例：",
         "  republish-npm --from @old-scope/pkg --to @new-scope/pkg",
@@ -252,14 +261,59 @@ function writeJSON(p, obj) {
   fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
 
-function rewriteName(pkgDir, newName) {
+function rewriteName(pkgDir, newName, keepScripts) {
   log("  ✏️  修改包名为：" + newName);
   const pkgJsonPath = path.join(pkgDir, "package.json");
   const pkg = readJSON(pkgJsonPath);
   const oldName = pkg.name;
+  
+  // 修改包名
   pkg.name = newName;
+  
+  // 清理可能导致发布失败的 scripts（除非用户指定保留）
+  const removedScripts = [];
+  if (!keepScripts && pkg.scripts) {
+    const scriptsToRemove = [
+      "prepublishOnly",
+      "prepublish", 
+      "prepare",
+      "prepack"
+    ];
+    
+    scriptsToRemove.forEach(function(scriptName) {
+      if (pkg.scripts[scriptName]) {
+        removedScripts.push(scriptName);
+        delete pkg.scripts[scriptName];
+      }
+    });
+    
+    // 如果 scripts 对象为空，删除整个 scripts 字段
+    if (Object.keys(pkg.scripts).length === 0) {
+      delete pkg.scripts;
+    }
+  }
+  
+  // 清理可能导致问题的其他字段
+  const fieldsToClean = ["publishConfig"];
+  fieldsToClean.forEach(function(field) {
+    if (pkg[field] && pkg[field].registry) {
+      log("  ⚠️  移除 package.json 中的 " + field + ".registry");
+      delete pkg[field].registry;
+      if (Object.keys(pkg[field]).length === 0) {
+        delete pkg[field];
+      }
+    }
+  });
+  
   writeJSON(pkgJsonPath, pkg);
   log("  ✓ 包名已从 " + oldName + " 改为 " + newName);
+  
+  if (removedScripts.length > 0) {
+    log("  ✓ 已清理 scripts: " + removedScripts.join(", "));
+  } else if (keepScripts && pkg.scripts) {
+    log("  ℹ️  保留原始 scripts（--keep-scripts）");
+  }
+  
   return { version: pkg.version };
 }
 
@@ -290,6 +344,7 @@ function main() {
   const dryRun = !!argv["dry-run"];
   const access = argv.access;
   const tag = argv.tag;
+  const keepScripts = !!argv["keep-scripts"];
 
   log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   log("📦 NPM 包重新发布工具");
@@ -301,6 +356,7 @@ function main() {
   if (versionsArg) log("🔢 指定版本:", versionsArg);
   if (tag) log("🏷️  发布标签:", tag);
   log("🔓 访问权限:", access);
+  log("🧹 清理构建脚本:", keepScripts ? "否" : "是");
   log("");
 
   ensureNpmAuth();
@@ -345,7 +401,7 @@ function main() {
         try {
           const tgz = packOneVersion(packDir, fromName, v, registry);
           const pkgDir = extractToReadyDir(tgz, workDir);
-          const meta = rewriteName(pkgDir, toName);
+          const meta = rewriteName(pkgDir, toName, keepScripts);
 
           if (meta.version !== v) {
             warn(
