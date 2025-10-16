@@ -1,0 +1,16 @@
+{
+  "name": "republish-npm",
+  "version": "1.0.1",
+  "description": "Republish all versions of an npm package under a new name.",
+  "bin": {
+    "republish-npm": "./cli.js"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.17.0"
+  },
+  "dependencies": {
+    "minimist": "^1.2.8",
+    "tar": "^6.2.1"
+  }
+}
