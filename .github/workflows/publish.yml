@@ -26,8 +26,6 @@ jobs:
 
       - name: 安装 pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: 获取 pnpm store 目录
         shell: bash
@@ -86,7 +84,7 @@ jobs:
             pnpm add -g @wilson_janet/republish-npm
             ```
 
-            查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) 了解更新内容。
+            查看 [CHANGELOG.md](https://github.com/wilsonyiyi/republish-npm/blob/master/CHANGELOG.md) 了解更新内容。
           draft: false
           prerelease: false
 

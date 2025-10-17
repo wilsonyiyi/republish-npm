@@ -34,7 +34,7 @@
 2. **克隆你的 fork**
 
    ```bash
-   git clone https://github.com/<your-username>/republish-npm.git
+   git clone https://github.com/wilsonyiyi/republish-npm.git
    cd republish-npm
    ```
 

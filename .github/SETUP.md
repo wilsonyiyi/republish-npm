@@ -273,5 +273,5 @@ npm unpublish @wilson_janet/republish-npm@0.2.1
 如果遇到问题：
 
 1. 查看 GitHub Actions 日志
-2. 查看本项目的 [Issues](https://github.com/wilson_janet/republish-npm/issues)
+2. 查看本项目的 [Issues](https://github.com/wilsonyiyi/republish-npm/issues)
 3. 创建新的 Issue 描述问题

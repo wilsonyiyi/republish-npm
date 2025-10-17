@@ -109,7 +109,7 @@ republish-npm \
 
 ```bash
 # 克隆仓库
-git clone https://github.com/wilson_janet/republish-npm.git
+git clone https://github.com/wilsonyiyi/republish-npm.git
 cd republish-npm
 
 # 安装依赖
@@ -179,6 +179,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 ## 🔗 相关链接
 
 - [npm 包地址](https://www.npmjs.com/package/@wilson_janet/republish-npm)
-- [GitHub 仓库](https://github.com/wilson_janet/republish-npm)
+- [GitHub 仓库](https://github.com/wilsonyiyi/republish-npm)
 - [更新日志](CHANGELOG.md)
 - [发布指南](.github/RELEASE.md)

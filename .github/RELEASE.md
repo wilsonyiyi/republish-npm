@@ -154,7 +154,7 @@ npm install -g @wilson_janet/republish-npm
 republish-npm --help
 
 # 4. 检查 GitHub Release
-# 访问 https://github.com/<your-username>/republish-npm/releases
+# 访问 https://github.com/wilsonyiyi/republish-npm/releases
 ```
 
 ## 回滚版本
