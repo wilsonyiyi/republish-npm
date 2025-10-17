@@ -1,6 +1,6 @@
 {
   "name": "@wilson_janet/republish-npm",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Republish all versions of an npm package under a new name.",
   "main": "src/index.js",
   "bin": {
