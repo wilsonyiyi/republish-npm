@@ -31,7 +31,17 @@ function main() {
 
   // 确定实际使用的 registry
   const sourceRegistry = fromRegistry || registry;
-  const targetRegistry = toRegistry || registry;
+
+  // 解析目标 registry（支持多个，逗号分隔）
+  let targetRegistries = [];
+  if (toRegistry) {
+    targetRegistries = toRegistry
+      .split(",")
+      .map((r) => r.trim())
+      .filter(Boolean);
+  } else if (registry) {
+    targetRegistries = [registry];
+  }
 
   log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   log("📦 NPM 包重新发布工具");
@@ -42,7 +52,14 @@ function main() {
   // 显示 registry 配置
   if (fromRegistry && toRegistry) {
     log("🌐 源包 registry:", fromRegistry);
-    log("🌐 目标包 registry:", toRegistry);
+    if (targetRegistries.length > 1) {
+      log(`🌐 目标包 registry (${targetRegistries.length} 个):`);
+      targetRegistries.forEach((reg, idx) => {
+        log(`   ${idx + 1}. ${reg}`);
+      });
+    } else {
+      log("🌐 目标包 registry:", toRegistry);
+    }
   } else if (registry) {
     log("🌐 使用自定义 registry:", registry);
   } else {
@@ -112,13 +129,35 @@ function main() {
             warn(`⚠️  解包后的 package.json version(${meta.version}) 与目标版本(${v})不一致，将按包内 version 发布。`);
           }
 
-          publishOne(pkgDir, {
-            registry: targetRegistry,
-            access: access,
-            tag: tag,
-            dryRun: dryRun,
-          });
-          log(`✅ ${progress} 成功：${toName}@${meta.version}${dryRun ? " (dry-run)" : ""}`);
+          // 发布到所有目标 registry
+          for (let regIdx = 0; regIdx < targetRegistries.length; regIdx++) {
+            const targetReg = targetRegistries[regIdx];
+
+            try {
+              if (targetRegistries.length > 1) {
+                log(`  📤 发布到 registry ${regIdx + 1}/${targetRegistries.length}: ${targetReg}`);
+              }
+
+              publishOne(pkgDir, {
+                registry: targetReg,
+                access: access,
+                tag: tag,
+                dryRun: dryRun,
+              });
+
+              if (targetRegistries.length > 1) {
+                log(`  ✓ 已发布到 registry ${regIdx + 1}`);
+              }
+            } catch (pubErr) {
+              const errMsg = `发布到 ${targetReg} 失败: ${pubErr.message}`;
+              err(`  ✗ ${errMsg}`);
+              throw new Error(errMsg);
+            }
+          }
+
+          log(
+            `✅ ${progress} 成功：${toName}@${meta.version}${dryRun ? " (dry-run)" : ""}${targetRegistries.length > 1 ? ` (已发布到 ${targetRegistries.length} 个 registry)` : ""}`,
+          );
         } catch (e) {
           failures.push({ version: v, error: e.message });
           err(`❌ ${progress} 失败：${toName}@${v}`);

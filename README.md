@@ -22,6 +22,10 @@ republish-npm --from foo --to @new/foo --registry https://registry.npmjs.org
 
 republish-npm --from foo --to @new/foo --from-registry https://npm.company.com --to-registry https://registry.npmjs.org
 
+#### 同时发布到多个目标 registry
+
+republish-npm --from foo --to @new/foo --from-registry https://npm.company.com --to-registry https://registry.npmjs.org,https://npm.backup.com
+
 #### 仅迁移部分版本 + 演练
 
 republish-npm --from foo --to bar --versions 1.0.0,1.0.2 --dry-run
@@ -40,7 +44,7 @@ republish-npm --from foo --to bar --yes
 - **--to**（必填）：新包名
 - **--registry**（可选）：自定义 registry，同时用于源和目标；不传则使用 npm 默认配置
 - **--from-registry**（可选）：源包的 npm registry（需与 `--to-registry` 同时使用）
-- **--to-registry**（可选）：目标包的 npm registry（需与 `--from-registry` 同时使用）
+- **--to-registry**（可选）：目标包的 npm registry（需与 `--from-registry` 同时使用），支持多个值（逗号分隔）
 - **--versions**（可选）：逗号分隔列表，仅处理这些版本
 - **--exclude-versions**（可选）：逗号分隔列表，排除这些版本
 - **--dry-run**（可选）：演练模式，仅打印命令不发布
@@ -54,6 +58,7 @@ republish-npm --from foo --to bar --yes
 - 🔒 自动清理可能导致发布失败的构建脚本（prepublishOnly、prepublish、prepare、prepack）
 - 🧹 自动移除 publishConfig.registry 以避免发布到错误的仓库
 - 🌐 支持源和目标使用不同的 npm registry（跨 registry 迁移）
+- 🎯 支持同时发布到多个目标 registry（镜像同步）
 - 📊 实时进度显示和 Loading 动画
 - ⚠️ 智能错误处理，网络错误时提前终止
 - 🎯 支持指定版本或全量迁移
@@ -79,6 +84,13 @@ republish-npm \
   --to @company/package \
   --from-registry https://registry.npmjs.org \
   --to-registry https://npm.company.com
+
+# 同时发布到多个目标 registry（用逗号分隔）
+republish-npm \
+  --from @company/package \
+  --to @public/package \
+  --from-registry https://npm.company.com \
+  --to-registry https://registry.npmjs.org,https://npm.backup.com,https://npm.mirror.com
 ```
 
 #### 同一 registry 内重命名
