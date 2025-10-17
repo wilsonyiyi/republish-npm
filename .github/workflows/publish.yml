@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: read
+      contents: write # 用于创建 GitHub Release
       id-token: write # 用于 npm provenance
 
     steps:
@@ -66,12 +66,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 创建 GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
           body: |
             ## 📦 版本发布
 
@@ -84,7 +80,10 @@ jobs:
             pnpm add -g @wilson_janet/republish-npm
             ```
 
-            查看 [CHANGELOG.md](https://github.com/wilsonyiyi/republish-npm/blob/master/CHANGELOG.md) 了解更新内容。
+            ### 更新内容
+
+            查看 [CHANGELOG.md](https://github.com/wilsonyiyi/republish-npm/blob/master/CHANGELOG.md) 了解详细更新内容。
           draft: false
           prerelease: false
+          generate_release_notes: true
 
