@@ -1,0 +1,92 @@
+name: Publish to NPM
+
+on:
+  push:
+    tags:
+      - 'v*' # 匹配 v 开头的 tag，如 v1.0.0, v0.1.0
+
+jobs:
+  publish:
+    name: 发布到 npm
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write # 用于 npm provenance
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 获取 pnpm store 目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 缓存 pnpm 依赖
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 验证 tag 与 package.json 版本一致
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PKG_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "错误：tag 版本 ($TAG_VERSION) 与 package.json 版本 ($PKG_VERSION) 不一致！"
+            exit 1
+          fi
+          echo "✓ 版本验证通过"
+
+      - name: 构建（如果需要）
+        run: |
+          # 当前项目不需要构建步骤
+          echo "✓ 跳过构建步骤"
+
+      - name: 发布到 npm
+        run: pnpm publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 创建 GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## 📦 版本发布
+
+            已自动发布到 npm: [@wilson_janet/republish-npm](https://www.npmjs.com/package/@wilson_janet/republish-npm)
+
+            ### 安装
+            ```bash
+            npm install -g @wilson_janet/republish-npm
+            # 或
+            pnpm add -g @wilson_janet/republish-npm
+            ```
+
+            查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) 了解更新内容。
+          draft: false
+          prerelease: false
+

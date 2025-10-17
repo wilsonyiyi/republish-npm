@@ -25,6 +25,20 @@
 - 更新命令行帮助文档
 - 添加使用场景说明
 
+### 🤖 CI/CD
+
+- **GitHub Actions 自动发布**：添加完整的 CI/CD 工作流
+  - `.github/workflows/publish.yml`：基于 tag 自动发布到 npm
+  - `.github/workflows/test.yml`：多版本 Node.js 和多系统测试
+  - 自动创建 GitHub Release
+  - 支持 npm provenance
+- 添加发布相关文档
+  - `.github/RELEASE.md`：详细的发布流程指南
+  - `.github/CONTRIBUTING.md`：贡献者指南
+- 优化 npm scripts
+  - `release:patch/minor/major`：版本发布脚本
+  - 自动推送 tag 触发 CI/CD
+
 ## [0.1.1] - 2025-01-16
 
 ### ♻️ 重构

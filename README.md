@@ -90,3 +90,83 @@ republish-npm \
   --to @new-scope/package \
   --registry https://registry.npmjs.org
 ```
+
+## 🚀 开发与发布
+
+### 本地开发
+
+```bash
+# 克隆仓库
+git clone https://github.com/wilson_janet/republish-npm.git
+cd republish-npm
+
+# 安装依赖
+pnpm install
+
+# 本地测试
+node cli.js --help
+
+# 代码格式化和检查
+pnpm run check
+pnpm run format
+pnpm run lint
+```
+
+### 发布新版本
+
+本项目使用 **GitHub Actions** 自动发布到 npm。
+
+#### 快速发布
+
+```bash
+# 补丁版本（bug 修复）：0.2.0 -> 0.2.1
+pnpm run release:patch
+
+# 次版本（新功能）：0.2.0 -> 0.3.0
+pnpm run release:minor
+
+# 主版本（破坏性更新）：0.2.0 -> 1.0.0
+pnpm run release:major
+```
+
+执行后会自动：
+
+1. ✅ 更新 `package.json` 版本号
+2. ✅ 创建 git commit 和 tag
+3. ✅ 推送到 GitHub
+4. ✅ 触发 GitHub Actions 自动发布到 npm
+5. ✅ 创建 GitHub Release
+
+#### 详细发布指南
+
+查看 [.github/RELEASE.md](.github/RELEASE.md) 了解完整的发布流程和注意事项。
+
+### CI/CD
+
+项目配置了两个 GitHub Actions 工作流：
+
+- **Test** (`.github/workflows/test.yml`)
+
+  - 在多个 Node.js 版本上测试（14, 16, 18, 20）
+  - 在多个操作系统上测试（Ubuntu, macOS, Windows）
+  - 每次推送到主分支或 PR 时触发
+
+- **Publish** (`.github/workflows/publish.yml`)
+  - 自动发布到 npm
+  - 创建 GitHub Release
+  - 推送 `v*` tag 时触发
+
+## 📄 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 🔗 相关链接
+
+- [npm 包地址](https://www.npmjs.com/package/@wilson_janet/republish-npm)
+- [GitHub 仓库](https://github.com/wilson_janet/republish-npm)
+- [更新日志](CHANGELOG.md)
+- [发布指南](.github/RELEASE.md)
