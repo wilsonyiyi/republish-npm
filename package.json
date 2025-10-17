@@ -27,16 +27,16 @@
     "rename",
     "scope"
   ],
-  "author": "wilson_janet",
+  "author": "Wilson",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wilson_janet/republish-npm.git"
+    "url": "https://github.com/wilsonyiyi/republish-npm.git"
   },
   "bugs": {
-    "url": "https://github.com/wilson_janet/republish-npm/issues"
+    "url": "https://github.com/wilsonyiyi/republish-npm/issues"
   },
-  "homepage": "https://github.com/wilson_janet/republish-npm#readme",
+  "homepage": "https://github.com/wilsonyiyi/republish-npm#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
